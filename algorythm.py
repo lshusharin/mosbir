@@ -84,9 +84,7 @@ if __name__ == "__main__":
                 hours_thisday = data[tool][days[i + 1]].keys()
                 hours_prevday = data[tool][days[i]].keys()
                 #checking close of '1' hour of the day and low of 0 hour
-                # print float(data[tool][days[i + 1]][hours_thisday[1]][3])
-
-
+                print data[tool][days[i + 1]]
 
                 if len(data[tool][days[i+1]].keys()) > 2 and float(data[tool][days[i+1]][hours_thisday[1]][3]) >= float(data[tool][days[i+1]][hours_thisday[0]][2]) and float(data[tool][days[i+1]][hours_thisday[1]][4]) < float(data[tool][days[i+1]][hours_thisday[0]][4]):
                     if float(data[tool][days[i+1]][hours_thisday[1]][4]) > float(data[tool][days[i]][hours_prevday[-1]][4]) and float(data[tool][days[i+1]][hours_thisday[0]][3]) < float(data[tool][days[i]][hours_prevday[-1]][3]):
