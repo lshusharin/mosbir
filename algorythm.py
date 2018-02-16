@@ -13,11 +13,12 @@ if __name__ == "__main__":
     balance_loss = 0
     balance_archive_profit = {}
     balance_archive_loss = {}
+    logs = {}
+    logs['instruments'] = {}
     while k< 9:
         data = json.load(open(os.path.abspath(os.path.join(os.path.abspath(__file__), '..', 'res'+str(k)+'.json'))), object_pairs_hook=OrderedDict)
         #data={tool0:{day0:{time:[param0... paramN]... timeN:[param0... paramN]}}}
         k +=1
-        logs = {}
         cyrillic_translit = {u'\u0410': 'A', u'\u0430': 'a',
                              u'\u0411': 'B', u'\u0431': 'b',
                              u'\u0412': 'V', u'\u0432': 'v',
@@ -44,9 +45,9 @@ if __name__ == "__main__":
                              u'\u0427': 'Ch', u'\u0447': 'ch',
                              u'\u0428': 'Sh', u'\u0448': 'sh',
                              u'\u0429': 'Shch', u'\u0449': 'shch',
-                             u'\u042a': '"', u'\u044a': '"',
+                             u'\u042a': '_', u'\u044a': '_',
                              u'\u042b': 'Y', u'\u044b': 'y',
-                             u'\u042c': "'", u'\u044c': "'",
+                             u'\u042c': '_', u'\u044c': '_',
                              u'\u042d': 'E', u'\u044d': 'e',
                              u'\u042e': 'Iu', u'\u044e': 'iu',
                              u'\u042f': 'Ia', u'\u044f': 'ia'}
@@ -62,7 +63,7 @@ if __name__ == "__main__":
                 else:
                     translit_name += letter
             print translit_name
-            logs[translit_name] = {'balance':0,
+            logs['instruments'][translit_name] = {'balance':0,
                           'days_profit':0,
                             'days_loss':{
                                         'days_stoploss':0,
@@ -84,25 +85,29 @@ if __name__ == "__main__":
                 hours_thisday = data[tool][days[i + 1]].keys()
                 hours_prevday = data[tool][days[i]].keys()
                 #checking close of '1' hour of the day and low of 0 hour
-                print data[tool][days[i + 1]]
+                # print data[tool][days[i + 1]]
 
-                if len(data[tool][days[i+1]].keys()) > 2 and float(data[tool][days[i+1]][hours_thisday[1]][3]) >= float(data[tool][days[i+1]][hours_thisday[0]][2]) and float(data[tool][days[i+1]][hours_thisday[1]][4]) < float(data[tool][days[i+1]][hours_thisday[0]][4]):
-                    if float(data[tool][days[i+1]][hours_thisday[1]][4]) > float(data[tool][days[i]][hours_prevday[-1]][4]) and float(data[tool][days[i+1]][hours_thisday[0]][3]) < float(data[tool][days[i]][hours_prevday[-1]][3]):
-                        bid = float(data[tool][days[i + 1]][hours_thisday[1]][0])
+                if len(data[tool][days[i+1]].keys()) > 2 and len(hours_thisday) >= 3 and float(data[tool][days[i+1]][hours_thisday[1]][3]) > float(data[tool][days[i+1]][hours_thisday[0]][2]) and float(data[tool][days[i+1]][hours_thisday[0]][3]) < float(data[tool][days[i]][hours_prevday[-1]][3]):
+                    bid = float(data[tool][days[i + 1]][hours_thisday[2]][0])
 
-                        stoploss = None
-                        if float(data[tool][days[i + 1]][hours_thisday[1]][3]) > float(data[tool][days[i+1]][hours_thisday[1]][2]):
-                            stoploss = float(data[tool][days[i+1]][hours_thisday[1]][2]) - 0.001 * float(data[tool][days[i+1]][hours_thisday[1]][2])
+                    stoploss = None
+                    if float(data[tool][days[i + 1]][hours_thisday[1]][3]) > float(data[tool][days[i+1]][hours_thisday[1]][2]):
+                        stoploss = float(data[tool][days[i+1]][hours_thisday[1]][2]) - 0.001 * float(data[tool][days[i+1]][hours_thisday[1]][2])
+                    else:
+                        stoploss = float(data[tool][days[i+1]][hours_thisday[1]][3]) - 0.003 * float(data[tool][days[i+1]][hours_thisday[1]][3])
+
+                    j = 3
+                    indicator = 0
+                    while j< len(hours_thisday):
+
+                        hour_low = float(data[tool][days[i + 1]][hours_thisday[j]][2])
+                        hour_close = float(data[tool][days[i + 1]][hours_thisday[j]][3])
+                        if indicator == 0 and hour_close - bid > 0.01:
+                            stoploss = bid
+                            indicator = 1
+                        if hour_low <= stoploss:
+                            closed_stoploss[days[i+1]] = stoploss - bid
                         else:
-                            stoploss = float(data[tool][days[i+1]][hours_thisday[1]][3]) - 0.003 * float(data[tool][days[i+1]][hours_thisday[1]][3])
-
-                        j = 3
-                        while j< len(hours_thisday):
-                            hour_low = float(data[tool][days[i + 1]][hours_thisday[j]][2])
-                            hour_close = float(data[tool][days[i + 1]][hours_thisday[j]][3])
-                            if hour_low <= stoploss:
-                                closed_stoploss[days[i+1]] = stoploss - bid
-
                             if j+1 == len(hours_thisday):
                                 #profit
                                 if hour_close > bid:
@@ -111,12 +116,15 @@ if __name__ == "__main__":
                                     closed_noprofit[days[i+1]] = 0
                                 elif hour_close < bid:
                                     closed_loss[days[i+1]] = hour_close - bid
-                            j+=1
+                        j+=1
+                # if translit_name == 'KorshGOK ao':
+                #     print data[tool]['20171220']
+                #     print closed_stoploss
                 i += 1
-            print "Profit", closed_profit
-            print "Loss", closed_loss
-            print "Stoploss", closed_stoploss
-            print "NoProfit", closed_noprofit
+            # print "Profit", closed_profit
+            # print "Loss", closed_loss
+            # print "Stoploss", closed_stoploss
+            # print "NoProfit", closed_noprofit
 
             balance = 0
             for day in closed_profit:
@@ -125,15 +133,16 @@ if __name__ == "__main__":
                 balance += closed_loss[day]
             for day in closed_stoploss:
                 balance += closed_stoploss[day]
-            if balance > 1:
-                balance_archive_profit[translit_name] = balance
+            if balance > 0:
+                if balance > 1:
+                    balance_archive_profit[translit_name] = balance
                 balance_profit += balance
             else:
                 balance_archive_loss[translit_name] = balance
                 balance_loss += balance
                 # balance_archived = balance
             total_balance += balance
-            logs[translit_name] = {'balance': balance,
+            logs['instruments'][translit_name] = {'balance': balance,
                           'days_profit': len(closed_profit.keys()),
                           'days_loss': {
                               'days_stoploss': len(closed_stoploss.keys()),
@@ -142,34 +151,30 @@ if __name__ == "__main__":
                           'days_noprofit': len(closed_noprofit.keys()),
                           }
 
-            print logs
+            # print logs
+    balance_archive_profit_sorted = OrderedDict(sorted(balance_archive_profit.items(), key=lambda x: x[1], reverse=True))
+    balance_archive_loss_sorted = OrderedDict(sorted(balance_archive_loss.items(), key=lambda x: x[1], reverse=True))
+    print "Sorted:", balance_archive_profit_sorted
     closedby_stoploss_total_days= 0
     closedby_time_profit_total_days=0
     closedby_time_noprofit_total_days=0
     closedby_time_loss_total_days = 0
-    for instr in logs:
-        closedby_stoploss_total_days += logs[instr]['days_loss']['days_stoploss']
-        closedby_time_profit_total_days += logs[instr]['days_profit']
-        closedby_time_noprofit_total_days += logs[instr]['days_noprofit']
-        closedby_time_loss_total_days += logs[instr]['days_loss']['days_timeloss']
-    logs['total'] = {'closedby_stoploss_total_days':closedby_stoploss_total_days,
-                    'closedby_time_profit_total_days':closedby_time_profit_total_days,
-                    'closedby_time_noprofit_total_days':closedby_time_noprofit_total_days,
-                    'closedby_time_loss_total_days':closedby_time_loss_total_days,
-                    'profit_vs_loss': balance_profit / balance_loss}
+    for instr in logs['instruments']:
+        closedby_stoploss_total_days += logs['instruments'][instr]['days_loss']['days_stoploss']
+        closedby_time_profit_total_days += logs['instruments'][instr]['days_profit']
+        closedby_time_noprofit_total_days += logs['instruments'][instr]['days_noprofit']
+        closedby_time_loss_total_days += logs['instruments'][instr]['days_loss']['days_timeloss']
+    logs['total'] = {'closedby_stoploss_total_times':closedby_stoploss_total_days,
+                    'closedby_time_profit_total_times':closedby_time_profit_total_days,
+                    'closedby_time_noprofit_total_times':closedby_time_noprofit_total_days,
+                    'closedby_time_loss_total_times':closedby_time_loss_total_days,
+                    'profit_to_loss': balance_profit / abs(balance_loss)}
     logs['instruments_total'] = total_instr
-    logs['instruments_best'] = balance_archive_profit
+    logs['instruments_best'] = balance_archive_profit_sorted
     logs['instruments_best_quantity'] = len(balance_archive_profit)
-    logs['instruments_worst'] = balance_archive_loss
+    logs['instruments_worst'] = balance_archive_loss_sorted
     logs['instruments_worst_quantity'] = len(balance_archive_loss)
-    logs['deals_profit_vs_loss'] =float(len(balance_archive_profit.keys())) / float(len(balance_archive_loss.keys()))
+    logs['deals_profit_to_loss'] =float(len(balance_archive_profit.keys())) / float(len(balance_archive_loss.keys()))
 
     with open('logs.json', 'a') as f:
-        f.write(json.dumps(logs, sort_keys=True))
-    #data_return = {tool0:{stopLossClosedDays:st_days,
-                #          timeWinDays:tmw_days,
-                #          timeNoProfitDays: tmnp_days,
-                #          timeLoseDays: tml_days,
-                #          winVsLoose: tmw_days / tml_days,
-                #
-                # }
+        f.write(json.dumps(logs))
